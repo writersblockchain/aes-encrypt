@@ -22,6 +22,6 @@ contract.wasm*
 # Integration tests
 tests/node_modules/*
 node_modules/*
-node_modules*
+/node_modules*
 .env*
 
