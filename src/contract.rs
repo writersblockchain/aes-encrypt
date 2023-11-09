@@ -44,7 +44,21 @@ pub fn execute(
     }
 }
 
-pub fn aes_siv_decrypt(
+fn aes_siv_encrypt(
+    plaintext: &[u8],
+    ad: Option<&[&[u8]]>,
+    key: &[u8],
+) -> Result<Vec<u8>, CryptoError> {
+    let ad = ad.unwrap_or(&[&[]]);
+
+    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    cipher.encrypt(ad, plaintext).map_err(|e| {
+        warn!("aes_siv_encrypt error: {:?}", e);
+        CryptoError::EncryptionError
+    })
+}
+
+fn aes_siv_decrypt(
     ciphertext: &[u8],
     ad: Option<&[&[u8]]>,
     key: &[u8],

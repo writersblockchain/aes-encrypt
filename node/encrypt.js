@@ -1,34 +1,40 @@
 import * as miscreant from "miscreant";
-import { randomFillSync } from "crypto";
-const cryptoProvider = new miscreant.PolyfillCryptoProvider();
-async function encryptData(
-  plaintextArray,
-  keyData,
-  nonceArray,
-  associatedData = ""
-) {
-  // Import the key
-  let key = await miscreant.AEAD.importKey(keyData, "AES-SIV", cryptoProvider);
+import { fromBase64, fromHex, toUtf8 } from "@cosmjs/encoding";
 
-  // Encrypt the plaintext
-  let ciphertext = await key.seal(plaintextArray, nonceArray, associatedData);
+let provider = new miscreant.PolyfillCryptoProvider();
 
-  return ciphertext;
-}
+const keyData = new Uint8Array(32).fill(1);
+
+let encrypt = async (msg, associatedData = []) => {
+  const siv = await miscreant.SIV.importKey(keyData, "AES-SIV", provider);
+  const plaintext = toUtf8(JSON.stringify(msg));
+
+  try {
+    const ciphertext = await siv.seal(plaintext, associatedData);
+    console.log("Encrypted data:", ciphertext);
+    return ciphertext;
+  } catch (e) {
+    console.warn("Error encrypting data:", e);
+    throw e;
+  }
+};
+
+let decrypt = async (ciphertext, associatedData = []) => {
+  const siv = await miscreant.SIV.importKey(keyData, "AES-SIV", provider);
+
+  try {
+    let decrypted = await siv.open(ciphertext, associatedData);
+    const convertedString = String.fromCharCode(...decrypted);
+    console.log("Decrypted data:", convertedString);
+    return convertedString;
+  } catch (e) {
+    console.warn("Error decrypting data:", e);
+    throw e;
+  }
+};
 
 // Usage example
-(async () => {
-  let keyData = new Uint8Array(32); // Key must be either 32 bytes (AES-128) or 64 bytes (AES-256)
-  randomFillSync(keyData); // Random key for the example
-
-  let nonce = new Uint8Array(16); // Nonce should be unique for each message
-  randomFillSync(nonce);
-
-  let plaintext = new Uint8Array([2, 3, 5, 7, 11, 13, 17, 19, 23, 29]); // Example plaintext data
-
-  let ciphertext = await encryptData(plaintext, keyData, nonce);
-
-  console.log("Ciphertext:", ciphertext);
-  console.log("Key:", keyData);
-  console.log("Nonce:", nonce);
-})();
+let msg = { i_like_turtles: "i like turtles!" };
+encrypt(msg).then((ciphertext) => {
+  decrypt(ciphertext);
+});

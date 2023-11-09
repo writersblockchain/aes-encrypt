@@ -1,23 +1,48 @@
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use log::*;
-use secret_template::CryptoError;
+use secret_encryption::CryptoError;
+
 fn main() {
-    let ciphertext = vec![
-        201, 202, 215, 190, 169, 13, 70, 53, 7, 190, 148, 202, 89, 132, 141, 9, 194, 94, 23, 68,
-        145, 33, 11, 166, 204, 110,
+    // Hardcoded encrypted data
+    let encrypted_data = [
+        175, 69, 13, 254, 115, 57, 164, 144, 25, 224, 155, 72, 84, 30, 25, 216, 1, 55, 116, 100,
+        59, 95, 104, 233, 87, 54, 35, 96, 207, 192, 26, 48, 218, 47, 103, 20, 91, 85, 29, 118, 33,
+        146, 136, 194, 101, 52, 168, 61, 9, 98, 237, 5,
     ];
 
-    let key = vec![
-        95, 98, 72, 63, 36, 62, 8, 90, 193, 87, 172, 132, 201, 103, 159, 142, 42, 137, 127, 241,
-        26, 122, 173, 122, 239, 105, 7, 213, 108, 212, 242, 58,
-    ];
+    let key = [1; 32]; // Fixed key
 
-    let decrypted_data = aes_siv_decrypt(&ciphertext, None, &key);
-    match decrypted_data {
-        Ok(data) => println!("Decrypted data: {:?}", data),
-        Err(e) => println!("Decryption failed: {:?}", e),
+    // Convert associated data to the correct type
+    let ad_data: &[&[u8]] = &[];
+    let ad = Some(ad_data);
+
+    // Decrypt
+    match aes_siv_decrypt(&encrypted_data, ad, &key) {
+        Ok(decrypted_data) => {
+            println!(
+                "Decrypted data: {:?}",
+                String::from_utf8(decrypted_data).unwrap()
+            );
+        }
+        Err(e) => {
+            warn!("Error decrypting data: {:?}", e);
+        }
     }
+}
+
+fn aes_siv_encrypt(
+    plaintext: &[u8],
+    ad: Option<&[&[u8]]>,
+    key: &[u8],
+) -> Result<Vec<u8>, CryptoError> {
+    let ad = ad.unwrap_or(&[&[]]);
+
+    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+    cipher.encrypt(ad, plaintext).map_err(|e| {
+        warn!("aes_siv_encrypt error: {:?}", e);
+        CryptoError::EncryptionError
+    })
 }
 
 fn aes_siv_decrypt(
