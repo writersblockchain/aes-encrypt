@@ -3,13 +3,23 @@ use cosmwasm_std::{
 };
 
 use crate::error::{ContractError, CryptoError};
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{config, config_read, State};
+use crate::msg::{
+    CountResponse, DecryptedResponse, ExecuteMsg, GetStoredMessageResp, InstantiateMsg,
+    KeysResponse, QueryMsg,
+};
+use crate::state::{
+    config, config_read, Decrypted, MyKeys, MyMessage, State, DECRYPTED, MY_KEYS, STORED_MESSAGE,
+};
 
 // //
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
+use ethabi::{decode, ParamType};
 use log::*;
+use secret_toolkit_crypto::{
+    secp256k1::{PrivateKey, PublicKey},
+    ContractPrng,
+};
 
 #[entry_point]
 pub fn instantiate(
@@ -34,17 +44,70 @@ pub fn instantiate(
 #[entry_point]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::CreateKeys {} => try_create_keys(deps, env),
+        ExecuteMsg::TryDecrypt { ciphertext } => try_decrypt(deps, env, ciphertext),
+        ExecuteMsg::ReceiveMessageEvm {
+            source_chain,
+            source_address,
+            payload,
+        } => receive_message_evm(deps, source_chain, source_address, payload),
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
     }
 }
 
-fn aes_siv_encrypt(
+pub fn try_create_keys(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    let prng_seed = env.block.random.unwrap().0;
+    let entropy: String = "secret".to_owned();
+    let mut rng = ContractPrng::new(&prng_seed, entropy.as_bytes());
+
+    let private_key: PrivateKey = PrivateKey::parse(&rng.rand_bytes())?;
+    let public_key: PublicKey = private_key.pubkey();
+
+    let my_keys = MyKeys {
+        private_key: private_key.serialize().to_vec(),
+        public_key: public_key.serialize().to_vec(),
+    };
+
+    MY_KEYS.save(deps.storage, &my_keys)?;
+
+    Ok(Response::default())
+}
+
+pub fn try_decrypt(
+    deps: DepsMut,
+    _env: Env,
+    ciphertext: Vec<u8>,
+) -> Result<Response, ContractError> {
+    let key = [1; 32]; // Fixed key
+    let ad_data: &[&[u8]] = &[];
+    let ad = Some(ad_data);
+
+    match aes_siv_decrypt(&ciphertext, ad, &key) {
+        Ok(decrypted_data) => {
+            let decrypted = Decrypted {
+                decrypted: String::from_utf8(decrypted_data.clone()).unwrap(),
+            };
+            DECRYPTED.save(deps.storage, &decrypted)?;
+            println!(
+                "Decrypted data: {:?}",
+                String::from_utf8(decrypted_data).unwrap()
+            );
+        }
+        Err(e) => {
+            warn!("Error decrypting data: {:?}", e);
+        }
+    }
+
+    Ok(Response::default().add_attribute_plaintext("nice!", "nice!"))
+}
+
+pub fn aes_siv_encrypt(
     plaintext: &[u8],
     ad: Option<&[&[u8]]>,
     key: &[u8],
@@ -58,7 +121,7 @@ fn aes_siv_encrypt(
     })
 }
 
-fn aes_siv_decrypt(
+pub fn aes_siv_decrypt(
     ciphertext: &[u8],
     ad: Option<&[&[u8]]>,
     key: &[u8],
@@ -95,11 +158,58 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
     Ok(Response::default())
 }
 
+pub fn receive_message_evm(
+    deps: DepsMut,
+    _source_chain: String,
+    _source_address: String,
+    payload: Binary,
+) -> Result<Response, ContractError> {
+    // decode the payload
+    // executeMsgPayload: [sender, message]
+    let decoded = decode(&vec![ParamType::Bytes], payload.as_slice()).unwrap();
+
+    // store message
+    STORED_MESSAGE.save(
+        deps.storage,
+        &MyMessage {
+            message: decoded[0].to_string(),
+        },
+    )?;
+
+    Ok(Response::new())
+}
+
 #[entry_point]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::GetKeys {} => to_binary(&query_keys(deps)?),
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        QueryMsg::GetDecrypted {} => to_binary(&query_decrypted(deps)?),
+        QueryMsg::GetStoredMessage {} => to_binary(&get_stored_message(deps)?),
     }
+}
+
+fn query_decrypted(deps: Deps) -> StdResult<DecryptedResponse> {
+    let decrypted = DECRYPTED.load(deps.storage)?;
+    Ok(DecryptedResponse {
+        decrypted: decrypted.decrypted,
+    })
+}
+
+pub fn get_stored_message(deps: Deps) -> StdResult<GetStoredMessageResp> {
+    let message = STORED_MESSAGE.may_load(deps.storage).unwrap().unwrap();
+    let resp = GetStoredMessageResp {
+        message: message.message,
+    };
+    Ok(resp)
+}
+
+fn query_keys(deps: Deps) -> StdResult<KeysResponse> {
+    let my_keys = MY_KEYS.load(deps.storage)?;
+    Ok(KeysResponse {
+        public_key: my_keys.public_key,
+        private_key: my_keys.private_key,
+    })
 }
 
 fn query_count(deps: Deps) -> StdResult<CountResponse> {

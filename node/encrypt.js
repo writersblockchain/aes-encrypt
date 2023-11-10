@@ -34,7 +34,7 @@ let decrypt = async (ciphertext, associatedData = []) => {
 };
 
 // Usage example
-let msg = { i_like_turtles: "i like turtles!" };
+let msg = { i_like_turtles: "I like turtles!" };
 encrypt(msg).then((ciphertext) => {
   decrypt(ciphertext);
 });
