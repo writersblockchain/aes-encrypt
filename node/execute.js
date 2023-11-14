@@ -13,9 +13,27 @@ const secretjs = new SecretNetworkClient({
 
 // secret contract info
 let contractCodeHash =
-  "17af2e019d5d2feeba2815cb2a352637a3c586419387f1534d2d94a3678cc1bc";
-let contractAddress = "secret1w7m5kxz2sslmhdkf5nyx3hneq4e7fzd6luvppp";
+  "ac6999fe7b90d82bf1b695a48fc84261eb7e0a96547b272b35f957efaa2e8c67";
+let contractAddress = "secret1dznj7kv4sfsyzmgaw3ym2tat9eyg3wknjunvyg";
 let encrypted_data;
+
+let try_create_keys = async () => {
+  const tx = await secretjs.tx.compute.executeContract(
+    {
+      sender: wallet.address,
+      contract_address: contractAddress,
+      msg: {
+        create_keys: {},
+      },
+      code_hash: contractCodeHash,
+    },
+    { gasLimit: 100_000 }
+  );
+
+  console.log(tx);
+};
+
+try_create_keys();
 
 // get stored encrypted data sent from EVM
 let get_stored_message = async () => {
@@ -64,4 +82,4 @@ let try_decrypt = async () => {
   console.log(tx);
 };
 
-try_decrypt();
+// try_decrypt();

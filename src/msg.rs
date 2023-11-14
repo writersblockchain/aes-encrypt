@@ -12,6 +12,7 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     TryDecrypt {
         ciphertext: Vec<u8>,
+        public_key: Vec<u8>,
     },
     CreateKeys {},
     ReceiveMessageEvm {

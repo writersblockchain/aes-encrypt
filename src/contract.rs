@@ -10,16 +10,17 @@ use crate::msg::{
 use crate::state::{
     config, config_read, Decrypted, MyKeys, MyMessage, State, DECRYPTED, MY_KEYS, STORED_MESSAGE,
 };
+use ecies::utils::encapsulate;
+use ecies::utils::generate_keypair;
+use ecies::{PublicKey, SecretKey};
+use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 
 // //
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use ethabi::{decode, ParamType};
 use log::*;
-use secret_toolkit_crypto::{
-    secp256k1::{PrivateKey, PublicKey},
-    ContractPrng,
-};
+// use secret_toolkit_crypto::ContractPrng;
 
 #[entry_point]
 pub fn instantiate(
@@ -50,7 +51,10 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CreateKeys {} => try_create_keys(deps, env),
-        ExecuteMsg::TryDecrypt { ciphertext } => try_decrypt(deps, env, ciphertext),
+        ExecuteMsg::TryDecrypt {
+            ciphertext,
+            public_key,
+        } => try_decrypt(deps, env, ciphertext, public_key),
         ExecuteMsg::ReceiveMessageEvm {
             source_chain,
             source_address,
@@ -62,16 +66,15 @@ pub fn execute(
 }
 
 pub fn try_create_keys(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
-    let prng_seed = env.block.random.unwrap().0;
-    let entropy: String = "secret".to_owned();
-    let mut rng = ContractPrng::new(&prng_seed, entropy.as_bytes());
+    let mut ring = ChaChaRng::from_seed(env.block.random.unwrap().to_array()?);
+    let (private_key, public_key) = generate_keypair(&mut ring);
 
-    let private_key: PrivateKey = PrivateKey::parse(&rng.rand_bytes())?;
-    let public_key: PublicKey = private_key.pubkey();
+    let private_key_vec = private_key.serialize().to_vec();
+    let public_key_vec = public_key.serialize().to_vec();
 
     let my_keys = MyKeys {
-        private_key: private_key.serialize().to_vec(),
-        public_key: public_key.serialize().to_vec(),
+        private_key: private_key_vec,
+        public_key: public_key_vec,
     };
 
     MY_KEYS.save(deps.storage, &my_keys)?;
@@ -83,8 +86,28 @@ pub fn try_decrypt(
     deps: DepsMut,
     _env: Env,
     ciphertext: Vec<u8>,
+    public_key: Vec<u8>,
 ) -> Result<Response, ContractError> {
-    let key = [1; 32]; // Fixed key
+    let my_keys = MY_KEYS.load(deps.storage)?;
+
+    let public_key_slice = public_key.as_slice();
+
+    // // Convert the slice into an array
+    let mut public_key_array = [0u8; 65];
+    public_key_array.copy_from_slice(public_key_slice);
+
+    // Now you can parse it
+    let public_key_formatted = PublicKey::parse(&public_key_array).unwrap();
+
+    let private_key_slice = my_keys.private_key.as_slice();
+    let mut private_key_array = [0u8; 32];
+    private_key_array.copy_from_slice(private_key_slice);
+    let private_key_formatted = SecretKey::parse(&private_key_array).unwrap();
+
+    let encapsulate_key = encapsulate(&private_key_formatted, &public_key_formatted);
+
+    let key = encapsulate_key.unwrap();
+
     let ad_data: &[&[u8]] = &[];
     let ad = Some(ad_data);
 
@@ -104,7 +127,7 @@ pub fn try_decrypt(
         }
     }
 
-    Ok(Response::default().add_attribute_plaintext("nice!", "nice!"))
+    Ok(Response::default())
 }
 
 pub fn aes_siv_encrypt(

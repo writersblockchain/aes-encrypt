@@ -40,17 +40,24 @@ schemars = { version = "0.8.11" }
 serde = { version = "1.0" }
 thiserror = { version = "1.0" }
 
+
 # crypto ya bish
 # aes-siv = { version = "0.7.0", default-features = false }
 aes-siv = "0.6.2"
 derive_more = "0.99"
 log = "0.4.8"
-secret-toolkit = { version = "0.10.0", features = ["crypto"] }
-secret-toolkit-crypto = { version = "0.10.0", features = [
-    "hash",
-    "rand",
-    "ecc-secp256k1",
+# secret-toolkit = { version = "0.10.0", features = ["crypto"] }
+# secret-toolkit-crypto = { version = "0.10.0", features = [
+#     "hash",
+#     "rand",
+#     "ecc-secp256k1",
+# ] }
+# secp256k1 = { version = "0.26.0" }
+ecies = { git = "https://github.com/kromsten/ecies", package = "ecies", default-features = false, features = [
+    "pure",
 ] }
+rand_chacha = { version = "0.3.1", default-features = false }
+semver = "1.0.18"
 
 # EVM
 prost = { version = "0.12.1", default-features = false, features = [
