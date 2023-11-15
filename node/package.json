@@ -16,6 +16,7 @@
     "eccrypto": "^1.1.6",
     "eciesjs": "^0.4.5",
     "miscreant": "^0.3.2",
+    "secp256k1": "^5.0.0",
     "secretjs": "^1.12.0",
     "secure-random": "^1.1.2"
   }

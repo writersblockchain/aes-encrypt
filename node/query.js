@@ -13,8 +13,8 @@ const secretjs = new SecretNetworkClient({
 
 // secret contract info
 let contractCodeHash =
-  "ac6999fe7b90d82bf1b695a48fc84261eb7e0a96547b272b35f957efaa2e8c67";
-let contractAddress = "secret1dznj7kv4sfsyzmgaw3ym2tat9eyg3wknjunvyg";
+  "65a2114ddd48b7294357ef2eabbd0e01cc66d3fee0852724a77148e9c0201566";
+let contractAddress = "secret1k5gqq546lfqs7wt58vvcs6mv4f9493z0tw4v9u";
 
 let get_decrypted = async () => {
   let query = await secretjs.query.compute.queryContract({

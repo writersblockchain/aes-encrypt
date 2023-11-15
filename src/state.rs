@@ -9,8 +9,8 @@ pub static CONFIG_KEY: &[u8] = b"config";
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct MyKeys {
-    pub public_key: Vec<u8>,
-    pub private_key: Vec<u8>,
+    pub public_key: String,
+    pub private_key: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

@@ -1,7 +1,3 @@
-use cosmwasm_std::{
-    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
-};
-
 use crate::error::{ContractError, CryptoError};
 use crate::msg::{
     CountResponse, DecryptedResponse, ExecuteMsg, GetStoredMessageResp, InstantiateMsg,
@@ -10,10 +6,17 @@ use crate::msg::{
 use crate::state::{
     config, config_read, Decrypted, MyKeys, MyMessage, State, DECRYPTED, MY_KEYS, STORED_MESSAGE,
 };
-use ecies::utils::encapsulate;
-use ecies::utils::generate_keypair;
-use ecies::{PublicKey, SecretKey};
-use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use cosmwasm_std::{
+    entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
+
+// use ecies::utils::encapsulate;
+// use ecies::utils::generate_keypair;
+// use ecies::utils::SharedSecret;
+// use ecies::{PublicKey, SecretKey};
+// use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
+use secp256k1::ecdh::SharedSecret;
+use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
 // //
 use aes_siv::aead::generic_array::GenericArray;
@@ -66,15 +69,20 @@ pub fn execute(
 }
 
 pub fn try_create_keys(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
-    let mut ring = ChaChaRng::from_seed(env.block.random.unwrap().to_array()?);
-    let (private_key, public_key) = generate_keypair(&mut ring);
+    let rng = env.block.random.unwrap().0;
+    let secp = Secp256k1::new();
 
-    let private_key_vec = private_key.serialize().to_vec();
-    let public_key_vec = public_key.serialize().to_vec();
+    let private_key = SecretKey::from_slice(&rng).unwrap();
+    let private_key_string = private_key.to_string();
+    // let private_key_bytes = hex::decode(private_key_string).unwrap();
+
+    let public_key = PublicKey::from_secret_key(&secp, &private_key);
+    // let public_key_bytes = public_key.serialize().to_vec();
+    let public_key_string = public_key.to_string();
 
     let my_keys = MyKeys {
-        private_key: private_key_vec,
-        public_key: public_key_vec,
+        private_key: private_key_string,
+        public_key: public_key_string,
     };
 
     MY_KEYS.save(deps.storage, &my_keys)?;
@@ -88,44 +96,33 @@ pub fn try_decrypt(
     ciphertext: Vec<u8>,
     public_key: Vec<u8>,
 ) -> Result<Response, ContractError> {
-    let my_keys = MY_KEYS.load(deps.storage)?;
+    // let my_keys = MY_KEYS.load(deps.storage)?;
 
-    let public_key_slice = public_key.as_slice();
+    // let my_private_key = SecretKey::from_slice(my_keys.private_key.as_slice()).unwrap();
+    // let my_public_key = PublicKey::from_slice(public_key.as_slice()).unwrap();
 
-    // // Convert the slice into an array
-    let mut public_key_array = [0u8; 65];
-    public_key_array.copy_from_slice(public_key_slice);
+    // let shared_secret = SharedSecret::new(&my_public_key, &my_private_key);
 
-    // Now you can parse it
-    let public_key_formatted = PublicKey::parse(&public_key_array).unwrap();
+    // let key = shared_secret;
 
-    let private_key_slice = my_keys.private_key.as_slice();
-    let mut private_key_array = [0u8; 32];
-    private_key_array.copy_from_slice(private_key_slice);
-    let private_key_formatted = SecretKey::parse(&private_key_array).unwrap();
+    // let ad_data: &[&[u8]] = &[];
+    // let ad = Some(ad_data);
 
-    let encapsulate_key = encapsulate(&private_key_formatted, &public_key_formatted);
-
-    let key = encapsulate_key.unwrap();
-
-    let ad_data: &[&[u8]] = &[];
-    let ad = Some(ad_data);
-
-    match aes_siv_decrypt(&ciphertext, ad, &key) {
-        Ok(decrypted_data) => {
-            let decrypted = Decrypted {
-                decrypted: String::from_utf8(decrypted_data.clone()).unwrap(),
-            };
-            DECRYPTED.save(deps.storage, &decrypted)?;
-            println!(
-                "Decrypted data: {:?}",
-                String::from_utf8(decrypted_data).unwrap()
-            );
-        }
-        Err(e) => {
-            warn!("Error decrypting data: {:?}", e);
-        }
-    }
+    // match aes_siv_decrypt(&ciphertext, ad, &key) {
+    //     Ok(decrypted_data) => {
+    //         let decrypted = Decrypted {
+    //             decrypted: String::from_utf8(decrypted_data.clone()).unwrap(),
+    //         };
+    //         DECRYPTED.save(deps.storage, &decrypted)?;
+    //         println!(
+    //             "Decrypted data: {:?}",
+    //             String::from_utf8(decrypted_data).unwrap()
+    //         );
+    //     }
+    //     Err(e) => {
+    //         warn!("Error decrypting data: {:?}", e);
+    //     }
+    // }
 
     Ok(Response::default())
 }

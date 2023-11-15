@@ -38,8 +38,8 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct KeysResponse {
-    pub public_key: Vec<u8>,
-    pub private_key: Vec<u8>,
+    pub public_key: String,
+    pub private_key: String,
 }
 
 // We define a custom struct for each query response

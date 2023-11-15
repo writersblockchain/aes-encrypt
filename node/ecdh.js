@@ -1,12 +1,34 @@
-import { PrivateKey, utils } from "eciesjs";
-const sk = new PrivateKey();
-const shared = new utils.getValidSecret(
-  sk,
-  [
-    3, 127, 119, 51, 24, 246, 191, 179, 68, 149, 170, 44, 129, 90, 23, 226, 124,
-    239, 23, 231, 14, 78, 136, 213, 91, 138, 104, 108, 115, 68, 0, 220, 74,
-  ]
-);
-console.log("shared: ", shared);
+import secp256k1 from "secp256k1/elliptic.js";
+import { randomBytes } from "crypto";
 
-console.log(sk);
+function getPrivateKey() {
+  while (true) {
+    const privKey = randomBytes(32);
+    if (secp256k1.privateKeyVerify(privKey)) return privKey;
+  }
+}
+
+let privKey = getPrivateKey();
+
+// get the public key in a compressed format
+let pubKey = secp256k1.publicKeyCreate(privKey);
+
+// let pubKey =
+// compressed public key from X and Y
+function hashfn(x, y) {
+  const pubKey = new Uint8Array(33);
+  pubKey[0] = (y[31] & 1) === 0 ? 0x02 : 0x03;
+  pubKey.set(x, 1);
+  return pubKey;
+}
+
+// get X point of ecdh
+const ecdhPointX = secp256k1.ecdh(
+  pubKey,
+  privKey,
+  { hashfn },
+  Buffer.alloc(33)
+);
+console.log("pub: ", pubKey);
+console.log("priv: ", Array.from(privKey));
+console.log("shared: ", Array.from(ecdhPointX));
