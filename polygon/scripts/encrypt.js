@@ -4,15 +4,13 @@ const { ethers } = require("hardhat");
 
 let provider = new miscreant.PolyfillCryptoProvider();
 let ciphertext;
-const keyData = Uint8Array.from([
-  228, 106, 238, 129, 86, 230, 68, 253, 172, 61, 46, 13, 221, 176, 66, 101, 241,
-  94, 180, 193, 246, 34, 90, 68, 198, 82, 189, 211, 119, 43, 101, 104, 107, 169,
-  153, 57, 185, 245, 208, 78, 172, 58, 26, 50, 105, 210, 250, 114, 6, 119, 246,
-  2,
+
+let keyData = Uint8Array.from([
+  188, 131, 212, 28, 13, 250, 169, 192, 183, 66, 222, 180, 252, 243, 131, 8,
+  242, 65, 77, 117, 36, 229, 79, 91, 29, 225, 105, 180, 30, 15, 195, 177,
 ]);
 
-let encrypt = async (msg, associatedData = [], keyData) => {
-  // const keyData = new Uint8Array(32).fill(1);
+let encrypt = async (msg, associatedData = []) => {
   const siv = await miscreant.SIV.importKey(keyData, "AES-SIV", provider);
   const plaintext = toUtf8(JSON.stringify(msg));
 
@@ -30,7 +28,7 @@ async function encrypt_evm() {
   const sendReceiveEncryptAddress =
     "0x0DC75cB5CE7335fa335b03F34d6f9a7697fA9336"; // Replace with your deployed contract's address
   const destinationChain = "secret"; // Replace with your desired destination chain
-  const destinationAddress = "secret1w7m5kxz2sslmhdkf5nyx3hneq4e7fzd6luvppp"; // Replace with your desired destination address
+  const destinationAddress = "secret1n6xpp4n8lp0qgd8acy68fnpwpkg0jk2zywaah9"; // Replace with your desired destination address
 
   let msg = { seanrad: "seanrad" };
   let my_encrypted_message = await encrypt(msg);

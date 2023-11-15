@@ -13,8 +13,8 @@ const secretjs = new SecretNetworkClient({
 
 // secret contract info
 let contractCodeHash =
-  "65a2114ddd48b7294357ef2eabbd0e01cc66d3fee0852724a77148e9c0201566";
-let contractAddress = "secret1k5gqq546lfqs7wt58vvcs6mv4f9493z0tw4v9u";
+  "f27f1455e562a815b7295d7f5fb798676ef83f8e0aba6a616cbae55ebf37bc51";
+let contractAddress = "secret1n6xpp4n8lp0qgd8acy68fnpwpkg0jk2zywaah9";
 
 let get_decrypted = async () => {
   let query = await secretjs.query.compute.queryContract({
@@ -27,7 +27,7 @@ let get_decrypted = async () => {
 
   console.log(query);
 };
-// get_decrypted();
+get_decrypted();
 
 // Query the contract for the stored message sent from Polygon
 let get_stored_message = async () => {
@@ -52,7 +52,6 @@ let get_stored_message = async () => {
 
 // get_stored_message();
 
-// Query the contract for the stored message sent from Polygon
 let get_keys = async () => {
   let query = await secretjs.query.compute.queryContract({
     contract_address: contractAddress,
@@ -65,4 +64,4 @@ let get_keys = async () => {
   console.log(query);
 };
 
-get_keys();
+// get_keys();

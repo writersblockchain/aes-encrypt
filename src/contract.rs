@@ -74,15 +74,15 @@ pub fn try_create_keys(deps: DepsMut, env: Env) -> Result<Response, ContractErro
 
     let private_key = SecretKey::from_slice(&rng).unwrap();
     let private_key_string = private_key.to_string();
-    // let private_key_bytes = hex::decode(private_key_string).unwrap();
+    let private_key_bytes = hex::decode(private_key_string).unwrap();
 
     let public_key = PublicKey::from_secret_key(&secp, &private_key);
-    // let public_key_bytes = public_key.serialize().to_vec();
-    let public_key_string = public_key.to_string();
+    let public_key_bytes = public_key.serialize().to_vec();
+    // let public_key_string = public_key.to_string();
 
     let my_keys = MyKeys {
-        private_key: private_key_string,
-        public_key: public_key_string,
+        private_key: private_key_bytes,
+        public_key: public_key_bytes,
     };
 
     MY_KEYS.save(deps.storage, &my_keys)?;
@@ -96,33 +96,46 @@ pub fn try_decrypt(
     ciphertext: Vec<u8>,
     public_key: Vec<u8>,
 ) -> Result<Response, ContractError> {
-    // let my_keys = MY_KEYS.load(deps.storage)?;
+    let my_keys = MY_KEYS.load(deps.storage)?;
 
-    // let my_private_key = SecretKey::from_slice(my_keys.private_key.as_slice()).unwrap();
-    // let my_public_key = PublicKey::from_slice(public_key.as_slice()).unwrap();
+    let my_private_key = SecretKey::from_slice(my_keys.private_key.as_slice()).map_err(|e| {
+        ContractError::CustomError {
+            val: format!("Invalid private key: {}", e),
+        }
+    })?;
 
-    // let shared_secret = SharedSecret::new(&my_public_key, &my_private_key);
+    let my_public_key =
+        PublicKey::from_slice(public_key.as_slice()).map_err(|e| ContractError::CustomError {
+            val: format!("Invalid public key: {}", e),
+        })?;
 
-    // let key = shared_secret;
+    let shared_secret = SharedSecret::new(&my_public_key, &my_private_key);
+    let key = shared_secret;
 
-    // let ad_data: &[&[u8]] = &[];
-    // let ad = Some(ad_data);
+    let ad_data: &[&[u8]] = &[];
+    let ad = Some(ad_data);
 
-    // match aes_siv_decrypt(&ciphertext, ad, &key) {
-    //     Ok(decrypted_data) => {
-    //         let decrypted = Decrypted {
-    //             decrypted: String::from_utf8(decrypted_data.clone()).unwrap(),
-    //         };
-    //         DECRYPTED.save(deps.storage, &decrypted)?;
-    //         println!(
-    //             "Decrypted data: {:?}",
-    //             String::from_utf8(decrypted_data).unwrap()
-    //         );
-    //     }
-    //     Err(e) => {
-    //         warn!("Error decrypting data: {:?}", e);
-    //     }
-    // }
+    match aes_siv_decrypt(&ciphertext, ad, &key) {
+        Ok(decrypted_data) => {
+            match String::from_utf8(decrypted_data.clone()) {
+                Ok(decrypted_string) => {
+                    let decrypted = Decrypted {
+                        decrypted: decrypted_string,
+                    };
+                    DECRYPTED.save(deps.storage, &decrypted)?;
+                    println!("Decrypted data: {:?}", decrypted.decrypted);
+                }
+                Err(e) => {
+                    warn!("Error converting decrypted data to string: {:?}", e);
+                    // Optionally, return an error here
+                }
+            }
+        }
+        Err(e) => {
+            warn!("Error decrypting data: {:?}", e);
+            // Optionally, return an error here if you need to indicate a failure to the caller
+        }
+    }
 
     Ok(Response::default())
 }
