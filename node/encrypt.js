@@ -6,8 +6,8 @@ let provider = new miscreant.PolyfillCryptoProvider();
 
 // const keyData = new Uint8Array(32).fill(1);
 const keyData = Uint8Array.from([
-  188, 131, 212, 28, 13, 250, 169, 192, 183, 66, 222, 180, 252, 243, 131, 8,
-  242, 65, 77, 117, 36, 229, 79, 91, 29, 225, 105, 180, 30, 15, 195, 177,
+  60, 184, 13, 235, 55, 172, 25, 14, 189, 123, 114, 89, 244, 238, 150, 142, 149,
+  137, 118, 127, 54, 180, 131, 31, 171, 74, 134, 162, 194, 82, 197, 183,
 ]);
 
 let encrypt = async (msg, associatedData = []) => {

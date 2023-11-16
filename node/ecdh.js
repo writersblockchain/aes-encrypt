@@ -20,6 +20,6 @@ let my_pubKey = secp256k1.publicKeyCreate(privKey);
 
 const ecdhPointX = secp256k1.ecdh(secret_pubKey, privKey);
 
-console.log("pub: ", pubKey);
+console.log("pub: ", my_pubKey);
 console.log("priv: ", Array.from(privKey));
 console.log("Shared secret (32 bytes):", Array.from(ecdhPointX));
