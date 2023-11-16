@@ -3,9 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct InstantiateMsg {
-    pub count: i32,
-}
+pub struct InstantiateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -20,17 +18,12 @@ pub enum ExecuteMsg {
         source_address: String,
         payload: Binary,
     },
-    Increment {},
-    Reset {
-        count: i32,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     GetKeys {},
-    GetCount {},
     GetDecrypted {},
     GetStoredMessage {},
 }
@@ -39,7 +32,6 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct KeysResponse {
     pub public_key: Vec<u8>,
-    pub private_key: Vec<u8>,
 }
 
 // We define a custom struct for each query response
@@ -52,10 +44,4 @@ pub struct DecryptedResponse {
 #[serde(rename_all = "snake_case")]
 pub struct GetStoredMessageResp {
     pub message: String,
-}
-
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct CountResponse {
-    pub count: i32,
 }

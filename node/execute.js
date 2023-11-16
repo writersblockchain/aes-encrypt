@@ -13,8 +13,8 @@ const secretjs = new SecretNetworkClient({
 
 // secret contract info
 let contractCodeHash =
-  "f27f1455e562a815b7295d7f5fb798676ef83f8e0aba6a616cbae55ebf37bc51";
-let contractAddress = "secret1n6xpp4n8lp0qgd8acy68fnpwpkg0jk2zywaah9";
+  "02f847147ed8fa44ad9f7b7d6cbba9737c48582bb3ef277fa29ef3a2d50a9555";
+let contractAddress = "secret1d32su06845c9xvs2025p3e4wm9vdd7ftlwdlvj";
 let encrypted_data;
 
 let try_create_keys = async () => {
@@ -33,7 +33,7 @@ let try_create_keys = async () => {
   console.log(tx);
 };
 
-// try_create_keys();
+try_create_keys();
 
 // decrypt the stored encrypted data sent from EVM
 let try_decrypt = async () => {
@@ -67,4 +67,4 @@ let try_decrypt = async () => {
   console.log(tx);
 };
 
-try_decrypt();
+// try_decrypt();

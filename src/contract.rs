@@ -1,44 +1,28 @@
 use crate::error::{ContractError, CryptoError};
 use crate::msg::{
-    CountResponse, DecryptedResponse, ExecuteMsg, GetStoredMessageResp, InstantiateMsg,
-    KeysResponse, QueryMsg,
+    DecryptedResponse, ExecuteMsg, GetStoredMessageResp, InstantiateMsg, KeysResponse, QueryMsg,
 };
-use crate::state::{
-    config, config_read, Decrypted, MyKeys, MyMessage, State, DECRYPTED, MY_KEYS, STORED_MESSAGE,
-};
+use crate::state::{Decrypted, MyKeys, MyMessage, DECRYPTED, MY_KEYS, STORED_MESSAGE};
 use cosmwasm_std::{
     entry_point, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
-// use ecies::utils::encapsulate;
-// use ecies::utils::generate_keypair;
-// use ecies::utils::SharedSecret;
-// use ecies::{PublicKey, SecretKey};
-// use rand_chacha::{rand_core::SeedableRng, ChaChaRng};
 use secp256k1::ecdh::SharedSecret;
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 
-// //
+//
 use aes_siv::aead::generic_array::GenericArray;
 use aes_siv::siv::Aes128Siv;
 use ethabi::{decode, ParamType};
 use log::*;
-// use secret_toolkit_crypto::ContractPrng;
 
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> Result<Response, StdError> {
-    let state = State {
-        count: msg.count,
-        owner: info.sender.clone(),
-    };
-
-    config(deps.storage).save(&state)?;
-
     deps.api
         .debug(&format!("Contract was initialized by {}", info.sender));
 
@@ -49,7 +33,7 @@ pub fn instantiate(
 pub fn execute(
     deps: DepsMut,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
@@ -63,8 +47,6 @@ pub fn execute(
             source_address,
             payload,
         } => receive_message_evm(deps, source_chain, source_address, payload),
-        ExecuteMsg::Increment {} => try_increment(deps),
-        ExecuteMsg::Reset { count } => try_reset(deps, info, count),
     }
 }
 
@@ -104,13 +86,13 @@ pub fn try_decrypt(
         }
     })?;
 
-    let my_public_key =
+    let other_public_key =
         PublicKey::from_slice(public_key.as_slice()).map_err(|e| ContractError::CustomError {
             val: format!("Invalid public key: {}", e),
         })?;
 
-    let shared_secret = SharedSecret::new(&my_public_key, &my_private_key);
-    let key = shared_secret;
+    let shared_secret = SharedSecret::new(&other_public_key, &my_private_key);
+    let key = shared_secret.to_vec();
 
     let ad_data: &[&[u8]] = &[];
     let ad = Some(ad_data);
@@ -168,29 +150,6 @@ pub fn aes_siv_decrypt(
     })
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
-    config(deps.storage).update(|mut state| -> Result<_, ContractError> {
-        state.count += 1;
-        Ok(state)
-    })?;
-
-    deps.api.debug("count incremented successfully");
-    Ok(Response::default())
-}
-
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
-    config(deps.storage).update(|mut state| -> Result<_, ContractError> {
-        if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        state.count = count;
-        Ok(state)
-    })?;
-
-    deps.api.debug("count reset successfully");
-    Ok(Response::default())
-}
-
 pub fn receive_message_evm(
     deps: DepsMut,
     _source_chain: String,
@@ -216,7 +175,6 @@ pub fn receive_message_evm(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetKeys {} => to_binary(&query_keys(deps)?),
-        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
         QueryMsg::GetDecrypted {} => to_binary(&query_decrypted(deps)?),
         QueryMsg::GetStoredMessage {} => to_binary(&get_stored_message(deps)?),
     }
@@ -241,11 +199,5 @@ fn query_keys(deps: Deps) -> StdResult<KeysResponse> {
     let my_keys = MY_KEYS.load(deps.storage)?;
     Ok(KeysResponse {
         public_key: my_keys.public_key,
-        private_key: my_keys.private_key,
     })
-}
-
-fn query_count(deps: Deps) -> StdResult<CountResponse> {
-    let state = config_read(deps.storage).load()?;
-    Ok(CountResponse { count: state.count })
 }

@@ -3,19 +3,19 @@ use aes_siv::siv::Aes128Siv;
 use log::*;
 use secp256k1::ecdh::SharedSecret;
 use secp256k1::{PublicKey, SecretKey};
-use secret_encryption::{ContractError, CryptoError};
+use secret_encryption::CryptoError;
 
 fn main() {
     // Hardcoded encrypted data
     let encrypted_data = [
-        141, 67, 69, 100, 172, 91, 58, 7, 0, 82, 215, 142, 28, 252, 121, 100, 96, 97, 28, 108, 39,
-        5, 216, 98, 140, 163, 194, 79, 153, 171, 89, 184, 58, 215, 19, 156, 36, 250, 251, 25, 177,
-        139, 167, 171, 182, 58, 9, 249, 93, 82, 141, 123,
+        63, 222, 102, 124, 209, 137, 122, 47, 69, 56, 61, 13, 252, 106, 20, 110, 253, 131, 24, 95,
+        66, 156, 161, 119, 221, 144, 64, 16, 97, 39, 249, 107, 9, 134, 129, 94, 205, 37, 153, 61,
+        31, 57, 171, 198, 127, 72, 175, 90, 75, 125, 221, 184,
     ];
 
     let other_public_key = [
-        2, 15, 59, 161, 106, 5, 104, 87, 221, 54, 12, 86, 168, 126, 144, 126, 162, 146, 92, 80, 95,
-        60, 160, 98, 199, 229, 156, 54, 55, 252, 47, 144, 157,
+        2, 151, 142, 171, 162, 214, 185, 135, 244, 246, 185, 98, 150, 43, 38, 243, 247, 218, 165,
+        250, 199, 227, 76, 0, 171, 197, 25, 112, 59, 196, 178, 27, 245,
     ];
 
     let my_private_key = [
@@ -27,12 +27,9 @@ fn main() {
 
     let my_public_key = PublicKey::from_slice(other_public_key.as_slice()).unwrap();
 
-    // let key = SharedSecret::new(&my_public_key, &my_private_key);
+    let key = SharedSecret::new(&my_public_key, &my_private_key).to_vec();
+
     // println!("SharedSecret: {:?}", key);
-    let key = [
-        60, 184, 13, 235, 55, 172, 25, 14, 189, 123, 114, 89, 244, 238, 150, 142, 149, 137, 118,
-        127, 54, 180, 131, 31, 171, 74, 134, 162, 194, 82, 197, 183,
-    ];
 
     // Convert associated data to the correct type
     let ad_data: &[&[u8]] = &[];
@@ -52,20 +49,6 @@ fn main() {
     }
 }
 
-fn aes_siv_encrypt(
-    plaintext: &[u8],
-    ad: Option<&[&[u8]]>,
-    key: &[u8],
-) -> Result<Vec<u8>, CryptoError> {
-    let ad = ad.unwrap_or(&[&[]]);
-
-    let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
-    cipher.encrypt(ad, plaintext).map_err(|e| {
-        warn!("aes_siv_encrypt error: {:?}", e);
-        CryptoError::EncryptionError
-    })
-}
-
 fn aes_siv_decrypt(
     ciphertext: &[u8],
     ad: Option<&[&[u8]]>,
@@ -80,6 +63,16 @@ fn aes_siv_decrypt(
     })
 }
 
-fn hex_to_byte_array(hex_str: &str) -> Result<Vec<u8>, hex::FromHexError> {
-    hex::decode(hex_str)
-}
+// fn aes_siv_encrypt(
+//     plaintext: &[u8],
+//     ad: Option<&[&[u8]]>,
+//     key: &[u8],
+// ) -> Result<Vec<u8>, CryptoError> {
+//     let ad = ad.unwrap_or(&[&[]]);
+
+//     let mut cipher = Aes128Siv::new(GenericArray::clone_from_slice(key));
+//     cipher.encrypt(ad, plaintext).map_err(|e| {
+//         warn!("aes_siv_encrypt error: {:?}", e);
+//         CryptoError::EncryptionError
+//     })
+// }

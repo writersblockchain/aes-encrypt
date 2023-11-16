@@ -17,6 +17,7 @@
     "curve25519-js": "0.0.4",
     "dotenv": "^16.0.3",
     "miscreant": "^0.3.2",
+    "secp256k1": "^5.0.0",
     "secretjs": "^1.12.0",
     "secure-random": "1.1.2"
   }
